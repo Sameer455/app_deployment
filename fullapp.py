@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score
 
 # Function to load and train the model
@@ -22,11 +22,11 @@ def load_and_train_model():
 
     # Set up hyperparameter grid for tuning
     param_grid = {
-        'n_estimators': [50, 100, 150],  # Number of trees in the forest
-        'max_depth': [10, 20, None],      # Maximum depth of each tree
-        'min_samples_split': [2, 5, 10],  # Minimum samples required to split an internal node
-        'min_samples_leaf': [1, 2, 4],    # Minimum samples required to be at a leaf node
-        'max_features': ['auto', 'sqrt', 'log2'],  # Number of features to consider when splitting a node
+        'n_estimators': [50, 100, 150],
+        'max_depth': [10, 20, None],
+        'min_samples_split': [2, 5, 10],
+        'min_samples_leaf': [1, 2, 4],
+        'max_features': ['auto', 'sqrt', 'log2'],
     }
 
     # Use GridSearchCV for hyperparameter tuning
@@ -39,8 +39,6 @@ def load_and_train_model():
     # Evaluate the model
     predictions = best_model.predict(X_test)
     acc = accuracy_score(y_test, predictions)
-    
-    # Return the trained model and accuracy
     return best_model, acc
 
 # Function to suggest diet based on prediction
@@ -62,47 +60,54 @@ def suggest_diet(prediction):
         ]
 
 # Main Streamlit app
-st.title("Heart Disease Prediction with Dietary Recommendations")
+st.set_page_config(page_title="Heart Disease Prediction App", layout="centered")
+st.title("💓 Heart Disease Prediction App")
+st.markdown("This app predicts the likelihood of heart disease and provides dietary recommendations for your health.")
 
 # Load and train the model
 with st.spinner("Training model..."):
     model, accuracy = load_and_train_model()
 st.success(f"Model trained successfully! Accuracy: {accuracy:.2f}")
 
+st.markdown("---")
+
 # Input form
-st.header("Patient Details")
-age = st.number_input("Age", min_value=1, max_value=120, value=30)
-sex = st.selectbox("Sex", options=["Female", "Male"], index=1)
-cp = st.selectbox("Chest Pain Type (0-3)", options=list(range(4)), index=0)
-trestbps = st.number_input("Resting Blood Pressure", min_value=50, max_value=200, value=120)
-chol = st.number_input("Cholesterol", min_value=100, max_value=600, value=200)
-fbs = st.selectbox("Fasting Blood Sugar > 120 mg/dl", options=["No", "Yes"], index=0)
-restecg = st.selectbox("Resting ECG Results (0-2)", options=list(range(3)), index=0)
-thalach = st.number_input("Max Heart Rate Achieved", min_value=50, max_value=220, value=150)
-exang = st.selectbox("Exercise-Induced Angina", options=["No", "Yes"], index=0)
-oldpeak = st.number_input("ST Depression Induced", min_value=0.0, max_value=10.0, value=1.0)
-slope = st.selectbox("Slope of Peak Exercise (0-2)", options=list(range(3)), index=1)
-ca = st.selectbox("Number of Major Vessels (0-4)", options=list(range(5)), index=0)
-thal = st.selectbox(
-    "Thalassemia",
-    options=["Normal", "Fixed Defect", "Reversible Defect"]
-)
+st.header("📋 Patient Details")
+st.markdown("Please fill in the details below:")
+
+age = st.slider("Age", min_value=1, max_value=120, value=30, help="Enter the patient's age.")
+sex = st.radio("Sex", options=["Female", "Male"], index=1, help="Select the patient's gender.")
+cp = st.selectbox("Chest Pain Type", options=["0: Typical Angina", "1: Atypical Angina", "2: Non-anginal Pain", "3: Asymptomatic"], index=0)
+trestbps = st.slider("Resting Blood Pressure (mmHg)", min_value=50, max_value=200, value=120, help="Resting blood pressure in mmHg.")
+chol = st.slider("Cholesterol (mg/dl)", min_value=100, max_value=600, value=200, help="Serum cholesterol in mg/dl.")
+fbs = st.radio("Fasting Blood Sugar > 120 mg/dl", options=["No", "Yes"], index=0, help="Is fasting blood sugar higher than 120 mg/dl?")
+restecg = st.selectbox("Resting ECG Results", options=["0: Normal", "1: ST-T Wave Abnormality", "2: Left Ventricular Hypertrophy"], index=0)
+thalach = st.slider("Max Heart Rate Achieved", min_value=50, max_value=220, value=150, help="Maximum heart rate achieved.")
+exang = st.radio("Exercise-Induced Angina", options=["No", "Yes"], index=0, help="Does exercise cause chest pain?")
+oldpeak = st.slider("ST Depression Induced", min_value=0.0, max_value=10.0, value=1.0, step=0.1, help="ST depression induced by exercise relative to rest.")
+slope = st.selectbox("Slope of Peak Exercise", options=["0: Upsloping", "1: Flat", "2: Downsloping"], index=1)
+ca = st.slider("Number of Major Vessels (0-4)", min_value=0, max_value=4, value=0, help="Number of major vessels colored by fluoroscopy.")
+thal = st.selectbox("Thalassemia", options=["Normal", "Fixed Defect", "Reversible Defect"])
 thal_mapping = {"Normal": 1, "Fixed Defect": 2, "Reversible Defect": 3}
-thal = thal_mapping[thal] 
+thal = thal_mapping[thal]
 
 # Prediction
-if st.button("Predict"):
+if st.button("🔍 Predict"):
     # Prepare input data
-    input_data = np.array([[age, int(sex == "Male"), cp, trestbps, chol, int(fbs == "Yes"), restecg,
-                            thalach, int(exang == "Yes"), oldpeak, slope, ca, thal + 1]])
+    input_data = np.array([[age, int(sex == "Male"), int(cp[0]), trestbps, chol, int(fbs == "Yes"), int(restecg[0]),
+                            thalach, int(exang == "Yes"), oldpeak, int(slope[0]), ca, thal]])
     prediction = model.predict(input_data)
 
     # Display result
     result = "Positive for Heart Disease" if prediction[0] == 1 else "Negative for Heart Disease"
-    st.subheader(f"Prediction: {result}")
+    result_color = "red" if prediction[0] == 1 else "green"
+    st.markdown(f"### **Prediction:** <span style='color:{result_color}'>{result}</span>", unsafe_allow_html=True)
 
     # Suggest diet
-    diet_recommendations = suggest_diet(prediction[0])
-    st.subheader("Dietary Recommendations")
-    for item in diet_recommendations:
-        st.write(f"- {item}")
+    with st.expander("🍎 Dietary Recommendations", expanded=True):
+        diet_recommendations = suggest_diet(prediction[0])
+        for item in diet_recommendations:
+            st.write(f"- {item}")
+
+st.markdown("---")
+st.markdown("💡 *Disclaimer: This app is for informational purposes only and is not a substitute for professional medical advice.*")
